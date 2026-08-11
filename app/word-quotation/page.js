@@ -1,34 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import SearchableSelect from "@/components/SearchableSelect";
+import { useInventory } from "@/context/InventoryContext";
 
 export default function WordQuotationPage() {
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
+  const { categories, products, loading } = useInventory();
   const [categoryId, setCategoryId] = useState("");
   const [productId, setProductId] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [qty, setQty] = useState("1");
+  const [qty, setQty] = useState("");
   const [items, setItems] = useState([]);
   const [companyName, setCompanyName] = useState("");
-  const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/categories").then((r) => r.json()),
-      fetch("/api/products").then((r) => r.json()),
-    ])
-      .then(([cats, prods]) => {
-        setCategories(cats);
-        setProducts(prods);
-      })
-      .catch(() => setError("Failed to load data. Please refresh."))
-      .finally(() => setLoading(false));
-  }, []);
 
   const categoryProducts = useMemo(
     () => products.filter((p) => String(p.categoryId) === String(categoryId)),
@@ -58,10 +44,10 @@ export default function WordQuotationPage() {
     setError("");
     const product = products.find((p) => String(p.id) === String(productId));
     const priceVal = parseFloat(price);
-    const qtyVal = parseInt(qty, 10);
+    const qtyVal = parseInt(qty || "1", 10);
     if (!product) return setError("Select a category and product.");
     if (!priceVal || priceVal <= 0) return setError("Enter a valid price (with GST).");
-    if (!qtyVal || qtyVal <= 0) return setError("Enter a valid quantity.");
+    if (isNaN(qtyVal) || qtyVal <= 0) return setError("Enter a valid quantity.");
 
     // Check for duplicate
     const existingIndex = items.findIndex(
@@ -88,7 +74,7 @@ export default function WordQuotationPage() {
     setProductId("");
     setDescription("");
     setPrice("");
-    setQty("1");
+    setQty("");
   }
 
   function removeItem(index) {
@@ -126,8 +112,8 @@ export default function WordQuotationPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-semibold">Generate Word Quotation</h1>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Generate Word Quotation</h1>
+        <p className="text-sm text-gray-500 dark:text-slate-300 mt-0.5">
           Build a quotation and download it as a Word document with your company letterhead.
           Prices entered are <strong>with GST (18%)</strong> — the document auto-calculates the breakup.
         </p>
@@ -135,7 +121,7 @@ export default function WordQuotationPage() {
 
       {/* Company Name */}
       <div className="card p-4">
-        <label className="block text-xs font-medium text-gray-500 mb-1.5">Company / Client Name (for the quotation &ldquo;To&rdquo; field)</label>
+        <label className="block text-xs font-medium text-gray-700 dark:text-slate-200 mb-1.5">Company / Client Name (for the quotation &ldquo;To&rdquo; field)</label>
         <input
           className="input max-w-md"
           placeholder="e.g. Alliance Associates"
@@ -191,13 +177,13 @@ export default function WordQuotationPage() {
         </button>
       </div>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {error && <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>}
 
       {/* Items table */}
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-wider text-gray-400 border-b border-gray-100">
+            <tr className="text-left text-xs uppercase tracking-wider font-semibold text-gray-500 dark:text-slate-300 border-b border-gray-200 dark:border-slate-700/80">
               <th className="px-4 py-3">#</th>
               <th className="px-4 py-3">Product</th>
               <th className="px-4 py-3">Description</th>
@@ -211,23 +197,24 @@ export default function WordQuotationPage() {
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td colSpan="8" className="px-4 py-8 text-center text-gray-300 text-sm">
+                <td colSpan="8" className="px-4 py-8 text-center text-gray-400 dark:text-slate-400 text-sm">
                   No items added yet.
                 </td>
               </tr>
             )}
+
             {items.map((it, i) => {
               const excl = it.priceWithGst / 1.18;
               const lineTotal = excl * it.qty;
               return (
-                <tr key={i} className="border-t border-gray-50">
-                  <td className="px-4 py-3 text-gray-400">{i + 1}</td>
-                  <td className="px-4 py-3 font-medium">{it.name}</td>
-                  <td className="px-4 py-3 text-gray-500">{it.description || "—"}</td>
-                  <td className="px-4 py-3 text-center tabular-nums">{it.qty}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-gray-400">{formatINR(it.priceWithGst)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{formatINR(excl)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium">{formatINR(lineTotal)}</td>
+                <tr key={i} className="border-t border-gray-50 dark:border-slate-700/40">
+                  <td className="px-4 py-3 text-gray-400 dark:text-slate-500">{i + 1}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-slate-100">{it.name}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-slate-400">{it.description || "—"}</td>
+                  <td className="px-4 py-3 text-center tabular-nums text-gray-700 dark:text-slate-300">{it.qty}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-400 dark:text-slate-500">{formatINR(it.priceWithGst)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{formatINR(excl)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900 dark:text-slate-100">{formatINR(lineTotal)}</td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => removeItem(i)} className="action-link-red">
                       Remove
@@ -245,20 +232,20 @@ export default function WordQuotationPage() {
         <div className="card p-4 flex flex-wrap items-start justify-between gap-6">
           <div className="space-y-1 text-sm tabular-nums">
             <div className="flex justify-between gap-8">
-              <span className="text-gray-500">Sub Total (excl. GST)</span>
-              <span className="font-medium">{formatINR(subtotal)}</span>
+              <span className="text-gray-500 dark:text-slate-400">Sub Total (excl. GST)</span>
+              <span className="font-medium text-gray-900 dark:text-slate-100">{formatINR(subtotal)}</span>
             </div>
             <div className="flex justify-between gap-8">
-              <span className="text-gray-500">CGST @ 9%</span>
-              <span>{formatINR(cgst)}</span>
+              <span className="text-gray-500 dark:text-slate-400">CGST @ 9%</span>
+              <span className="text-gray-700 dark:text-slate-300">{formatINR(cgst)}</span>
             </div>
             <div className="flex justify-between gap-8">
-              <span className="text-gray-500">SGST @ 9%</span>
-              <span>{formatINR(sgst)}</span>
+              <span className="text-gray-500 dark:text-slate-400">SGST @ 9%</span>
+              <span className="text-gray-700 dark:text-slate-300">{formatINR(sgst)}</span>
             </div>
-            <div className="flex justify-between gap-8 pt-1 border-t border-gray-100">
-              <span className="font-semibold">Grand Total (incl. 18% GST)</span>
-              <span className="font-semibold text-base">{formatINR(grandTotal)}</span>
+            <div className="flex justify-between gap-8 pt-1 border-t border-gray-100 dark:border-slate-700">
+              <span className="font-semibold text-gray-900 dark:text-slate-100">Grand Total (incl. 18% GST)</span>
+              <span className="font-semibold text-base text-gray-900 dark:text-slate-100">{formatINR(grandTotal)}</span>
             </div>
           </div>
           <button
@@ -273,3 +260,4 @@ export default function WordQuotationPage() {
     </div>
   );
 }
+

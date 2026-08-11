@@ -5,8 +5,9 @@
 @tailwind utilities;
 
 :root {
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  color-scheme: light;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
   --danger: #dc2626;
   --danger-hover: #b91c1c;
   --success: #16a34a;
@@ -18,28 +19,90 @@
   --text-muted: #9ca3af;
 }
 
+.dark {
+  color-scheme: dark;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --danger: #ef4444;
+  --danger-hover: #f87171;
+  --success: #22c55e;
+  --border: #334155;
+  --bg-card: #151e2e;
+  --bg-page: #0b0f19;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+}
+
 * {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark * {
+  scrollbar-color: #334155 transparent;
+}
+
+/* Custom scrollbars for WebKit / Chromium browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Hide ugly native number input spinners for a clean polished aesthetic */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 @layer components {
   .input {
-    @apply border border-gray-200 rounded-lg px-3 py-2 text-sm w-full bg-white
-           focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400
+    @apply border border-gray-200 dark:border-slate-700/80 rounded-lg px-3 py-2 text-sm w-full bg-white dark:bg-slate-950/70 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400
+           hover:border-gray-300 dark:hover:border-slate-600
+           focus:outline-none focus:ring-2 focus:ring-indigo-500/25 focus:border-indigo-500 dark:focus:border-indigo-400
            transition-all duration-150;
   }
   .btn-primary {
-    @apply bg-gray-900 text-white rounded-lg px-4 py-2 text-sm font-medium
-           hover:bg-gray-800 active:scale-[0.98] disabled:opacity-50
-           transition-all duration-150;
+    @apply bg-gray-900 dark:bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-medium
+           hover:bg-gray-800 dark:hover:bg-indigo-500 active:scale-[0.98] disabled:opacity-50
+           shadow-sm dark:shadow-indigo-600/20 transition-all duration-150;
   }
   .btn-secondary {
-    @apply border border-gray-200 rounded-lg px-4 py-2 text-sm font-medium bg-white
-           hover:bg-gray-50 active:scale-[0.98]
+    @apply border border-gray-200 dark:border-slate-700 rounded-lg px-4 py-2 text-sm font-medium bg-white dark:bg-slate-800/90 text-gray-700 dark:text-slate-200
+           hover:bg-gray-50 dark:hover:bg-slate-700 active:scale-[0.98]
            transition-all duration-150;
   }
   .card {
-    @apply bg-white rounded-xl border border-gray-100 shadow-sm;
+    @apply bg-white dark:bg-slate-900/90 rounded-xl border border-gray-100 dark:border-slate-800 shadow-sm dark:shadow-md dark:shadow-black/30;
   }
 }
 
@@ -49,6 +112,9 @@ tbody tr {
 }
 tbody tr:hover {
   background-color: #f9fafb;
+}
+.dark tbody tr:hover {
+  background-color: rgba(30, 41, 59, 0.5);
 }
 
 /* Toast animation */
@@ -72,37 +138,109 @@ tbody tr:hover {
   @apply text-sm font-medium transition-colors duration-150 cursor-pointer;
 }
 .action-link-blue {
-  @apply action-link text-blue-600 hover:text-blue-800;
+  @apply action-link text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300;
 }
 .action-link-red {
-  @apply action-link text-red-500 hover:text-red-700;
+  @apply action-link text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300;
 }
 
 /* Category pill */
 .pill {
-  @apply inline-flex items-center gap-1.5 bg-gray-50 text-gray-600 text-xs font-medium
-         px-3 py-1.5 rounded-full border border-gray-100
+  @apply inline-flex items-center gap-1.5 bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-200 text-xs font-medium
+         px-3 py-1.5 rounded-full border border-gray-200 dark:border-slate-700
          transition-all duration-150;
 }
 .pill:hover {
-  @apply bg-gray-100 border-gray-200;
+  @apply bg-gray-100 dark:bg-slate-700 border-gray-300 dark:border-slate-600;
 }
+
+
 
 @media print {
   @page {
-    margin-top: 10mm;
-    margin-bottom: 10mm;
-    margin-left: 10mm;
-    margin-right: 10mm;
+    size: A4 portrait;
+    margin: 15mm 15mm;
   }
+  
+  :root, html, body, html.dark, html.dark body {
+    --bg-page: #ffffff !important;
+    --bg-card: #ffffff !important;
+    --text-primary: #000000 !important;
+    --text-secondary: #333333 !important;
+    --text-muted: #666666 !important;
+    --border: #cccccc !important;
+    color-scheme: light !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   .no-print {
     display: none !important;
   }
-  body {
-    background: white !important;
+
+  html.dark *, .dark *, * {
+    color: #000000 !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
+
   main {
     max-width: 100% !important;
     padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  .card {
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  thead tr {
+    border-bottom: 1.5px solid #000000 !important;
+  }
+
+  thead th {
+    color: #000000 !important;
+    font-weight: 700 !important;
+    padding: 8px 10px !important;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid #e5e7eb !important;
+  }
+
+  tbody td {
+    color: #000000 !important;
+    padding: 8px 10px !important;
+  }
+
+  tfoot tr {
+    border-top: 1.5px solid #000000 !important;
+  }
+
+  tfoot td {
+    color: #000000 !important;
+    font-weight: 700 !important;
+    padding: 10px 10px !important;
   }
 }
+

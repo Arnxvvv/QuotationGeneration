@@ -72,7 +72,7 @@ function makeProductRowXml(sno, name, desc, qty, priceExcl, total) {
 </w:tr>`;
 }
 
-function makeSummaryRowXml(label, instr, bold = false, topBorder = false) {
+function makeSummaryRowXml(label, instr, initialVal, bold = false, topBorder = false) {
   const b = bold
     ? `<w:b xmlns:w="${W}"/><w:bCs xmlns:w="${W}"/>`
     : "";
@@ -94,7 +94,7 @@ function makeSummaryRowXml(label, instr, bold = false, topBorder = false) {
     <w:p>
       <w:pPr><w:rPr>${TNR}${b}<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:pPr>
       <w:fldSimple w:instr="${xe(instr)}">
-        <w:r><w:rPr>${TNR}${b}<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>0.00</w:t></w:r>
+        <w:r><w:rPr>${TNR}${b}<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>${xe(initialVal)}</w:t></w:r>
       </w:fldSimple>
     </w:p>
   </w:tc>
@@ -189,11 +189,13 @@ export async function POST(req) {
       itemsTable.removeChild(existingRows[i]);
     }
 
-    // Add product rows
+    // Add product rows & calculate totals
+    let subtotal = 0;
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const priceExcl = item.priceWithGst / 1.18;
       const total = priceExcl * item.qty;
+      subtotal += total;
       const rowXml = makeProductRowXml(
         `${i + 1}.`,
         item.name,
@@ -208,17 +210,66 @@ export async function POST(req) {
     // Add summary rows
     const n = items.length;
     const fRange = `F2:F${1 + n}`;
+    const cgst = subtotal * 0.09;
+    const sgst = subtotal * 0.09;
+    const grandTotal = subtotal * 1.18;
+
+    const formatNum = (num) =>
+      num.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
 
     const summarySpecs = [
-      { label: "Sub Total (Without GST)  \u20b9", instr: ` =SUM(${fRange}) \\# "#,##0.00" `, bold: true, border: true },
-      { label: "CGST @ 9%  \u20b9", instr: ` =SUM(${fRange})*0.09 \\# "#,##0.00" `, bold: false, border: false },
-      { label: "SGST @ 9%  \u20b9", instr: ` =SUM(${fRange})*0.09 \\# "#,##0.00" `, bold: false, border: false },
-      { label: "Grand Total  (Incl. 18% GST)  \u20b9", instr: ` =SUM(${fRange})*1.18 \\# "#,##0.00" `, bold: true, border: false },
+      {
+        label: "Sub Total (Without GST)  \u20b9",
+        instr: ` =SUM(${fRange}) \\# "#,##0.00" `,
+        initialVal: formatNum(subtotal),
+        bold: true,
+        border: true,
+      },
+      {
+        label: "CGST @ 9%  \u20b9",
+        instr: ` =SUM(${fRange})*0.09 \\# "#,##0.00" `,
+        initialVal: formatNum(cgst),
+        bold: false,
+        border: false,
+      },
+      {
+        label: "SGST @ 9%  \u20b9",
+        instr: ` =SUM(${fRange})*0.09 \\# "#,##0.00" `,
+        initialVal: formatNum(sgst),
+        bold: false,
+        border: false,
+      },
+      {
+        label: "Grand Total  (Incl. 18% GST)  \u20b9",
+        instr: ` =SUM(${fRange})*1.18 \\# "#,##0.00" `,
+        initialVal: formatNum(grandTotal),
+        bold: true,
+        border: false,
+      },
     ];
 
     for (const s of summarySpecs) {
-      const xml = makeSummaryRowXml(s.label, s.instr, s.bold, s.border);
+      const xml = makeSummaryRowXml(s.label, s.instr, s.initialVal, s.bold, s.border);
       itemsTable.appendChild(fragment(doc, xml));
+    }
+
+    // ── Ensure word/settings.xml has <w:updateFields w:val="true"/> ───────
+    const settingsFile = zip.file("word/settings.xml");
+    if (settingsFile) {
+      const settingsXmlStr = await settingsFile.async("string");
+      const settingsDoc = new DOMParser().parseFromString(settingsXmlStr, "text/xml");
+      const settingsEl = settingsDoc.getElementsByTagNameNS(W, "settings")[0] || settingsDoc.documentElement;
+      const existingUpdateFields = settingsDoc.getElementsByTagNameNS(W, "updateFields");
+      if (!existingUpdateFields || existingUpdateFields.length === 0) {
+        const updateFieldsNode = settingsDoc.createElementNS(W, "w:updateFields");
+        updateFieldsNode.setAttributeNS(W, "w:val", "true");
+        settingsEl.appendChild(updateFieldsNode);
+        const settingsSerializer = new XMLSerializer();
+        zip.file("word/settings.xml", settingsSerializer.serializeToString(settingsDoc));
+      }
     }
 
     // ── Remove old hardcoded CGST paragraph if present ──────────────────────

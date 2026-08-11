@@ -3,7 +3,8 @@ import json
 import os
 from datetime import date
 from docx import Document
-from docx.oxml.ns import qn
+from docx.oxml.ns import qn, nsdecls
+from docx.oxml import parse_xml
 from lxml import etree
 
 NS  = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
@@ -27,7 +28,7 @@ def make_product_row(sno, name, desc, qty, price_excl, total):
     </w:p></w:tc>
 </w:tr>''')
 
-def make_summary_row(label, instr, bold=False, top_border=False):
+def make_summary_row(label, instr, initial_val, bold=False, top_border=False):
     b   = f'<w:b xmlns:w="{NS}"/><w:bCs xmlns:w="{NS}"/>' if bold else ''
     bdr = (f'<w:tcBorders xmlns:w="{NS}"><w:top w:val="single" w:sz="6" w:space="0" w:color="000000"/>'
            f'</w:tcBorders>') if top_border else ''
@@ -46,7 +47,7 @@ def make_summary_row(label, instr, bold=False, top_border=False):
     <w:p>
       <w:pPr><w:rPr>{TNR}{b}<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:pPr>
       <w:fldSimple w:instr="{xe(instr)}">
-        <w:r><w:rPr>{TNR}{b}<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>0.00</w:t></w:r>
+        <w:r><w:rPr>{TNR}{b}<w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t>{xe(initial_val)}</w:t></w:r>
       </w:fldSimple>
     </w:p>
   </w:tc>
@@ -85,6 +86,7 @@ def main():
             tbl_el.remove(tr)
 
         # Add product rows
+        subtotal = 0.0
         for idx, item in enumerate(items):
             sno = f"{idx + 1}."
             name = item["name"]
@@ -92,20 +94,30 @@ def main():
             qty = int(item["qty"])
             price_incl = float(item["priceWithGst"])
             price_excl = price_incl / 1.18
-            tbl_el.append(make_product_row(sno, name, desc, qty, price_excl, qty * price_excl))
+            total = qty * price_excl
+            subtotal += total
+            tbl_el.append(make_product_row(sno, name, desc, qty, price_excl, total))
 
         # Add summary rows (dynamic range)
         n = len(items)
         f_range = f"F2:F{1 + n}"
+        cgst = subtotal * 0.09
+        sgst = subtotal * 0.09
+        grand_total = subtotal * 1.18
 
         tbl_el.append(make_summary_row("Sub Total (Without GST)  \u20b9",
-            r' =SUM(ABOVE) \# "#,##0.00" ', bold=True, top_border=True))
+            f' =SUM({f_range}) \\# "#,##0.00" ', f"{subtotal:,.2f}", bold=True, top_border=True))
         tbl_el.append(make_summary_row("CGST @ 9%  \u20b9",
-            f' =SUM({f_range})*0.09 \\# "#,##0.00" '))
+            f' =SUM({f_range})*0.09 \\# "#,##0.00" ', f"{cgst:,.2f}"))
         tbl_el.append(make_summary_row("SGST @ 9%  \u20b9",
-            f' =SUM({f_range})*0.09 \\# "#,##0.00" '))
+            f' =SUM({f_range})*0.09 \\# "#,##0.00" ', f"{sgst:,.2f}"))
         tbl_el.append(make_summary_row("Grand Total  (Incl. 18% GST)  \u20b9",
-            f' =SUM({f_range})*1.18 \\# "#,##0.00" ', bold=True))
+            f' =SUM({f_range})*1.18 \\# "#,##0.00" ', f"{grand_total:,.2f}", bold=True))
+
+        # Ensure updateFields setting is set so Word refreshes on open
+        settings_el = doc.settings.element
+        if settings_el.find(qn('w:updateFields')) is None:
+            settings_el.append(parse_xml(r'<w:updateFields %s w:val="true"/>' % nsdecls('w')))
 
         # Remove old hardcoded CGST paragraph
         body = doc.element.body

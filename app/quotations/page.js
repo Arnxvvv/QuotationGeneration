@@ -26,15 +26,15 @@ export default function QuotationsPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-lg font-semibold">Quotations</h1>
+      <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Quotations</h1>
 
       {loading ? (
-        <p className="text-gray-400 text-sm">Loading…</p>
+        <p className="text-gray-400 dark:text-slate-400 text-sm">Loading…</p>
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs uppercase tracking-wider text-gray-400 border-b border-gray-100">
+              <tr className="text-left text-xs uppercase tracking-wider text-gray-400 dark:text-slate-400 border-b border-gray-100 dark:border-slate-700/60">
                 <th className="px-4 py-3">Ref No.</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3 text-right">Total</th>
@@ -44,16 +44,16 @@ export default function QuotationsPage() {
             <tbody>
               {quotations.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="px-4 py-8 text-center text-gray-300 text-sm">
+                  <td colSpan="4" className="px-4 py-8 text-center text-gray-300 dark:text-slate-500 text-sm">
                     No quotations yet.
                   </td>
                 </tr>
               )}
               {quotations.map((q) => (
-                <tr key={q.id} className="border-t border-gray-50">
-                  <td className="px-4 py-3 font-medium">{q.refNumber}</td>
-                  <td className="px-4 py-3 text-gray-500">{new Date(q.quotationDate).toLocaleDateString("en-IN")}</td>
-                  <td className="px-4 py-3 text-right tabular-nums font-medium">{formatINR(q.grandTotal)}</td>
+                <tr key={q.id} className="border-t border-gray-50 dark:border-slate-700/40">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-slate-100">{q.refNumber}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-slate-400">{new Date(q.quotationDate).toLocaleDateString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900 dark:text-slate-100">{formatINR(q.grandTotal)}</td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
                     <Link className="action-link-blue mr-3" href={`/quotations/${q.id}`}>
                       View
@@ -74,3 +74,4 @@ export default function QuotationsPage() {
     </div>
   );
 }
+

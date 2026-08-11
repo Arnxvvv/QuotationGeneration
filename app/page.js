@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/format";
 import SearchableSelect from "@/components/SearchableSelect";
+import { useInventory } from "@/context/InventoryContext";
 
 export default function BuilderPage() {
   const router = useRouter();
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
+  const { categories, products, loading, error: contextError } = useInventory();
   const [categoryId, setCategoryId] = useState("");
   const [productId, setProductId] = useState("");
   const [price, setPrice] = useState("");
-  const [qty, setQty] = useState("1");
+  const [qty, setQty] = useState("");
   const [items, setItems] = useState([]);
   const [customer, setCustomer] = useState({
     name: "",
@@ -21,21 +21,8 @@ export default function BuilderPage() {
     date: new Date().toISOString().slice(0, 10),
   });
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/categories").then((r) => r.json()),
-      fetch("/api/products").then((r) => r.json()),
-    ])
-      .then(([cats, prods]) => {
-        setCategories(cats);
-        setProducts(prods);
-      })
-      .catch(() => setError("Failed to load data. Please refresh."))
-      .finally(() => setLoading(false));
-  }, []);
 
   const categoryProducts = useMemo(
     () => products.filter((p) => String(p.categoryId) === String(categoryId)),
@@ -51,10 +38,10 @@ export default function BuilderPage() {
     setError("");
     const product = products.find((p) => String(p.id) === String(productId));
     const unitPrice = parseFloat(price);
-    const quantity = parseInt(qty, 10);
+    const quantity = parseInt(qty || "1", 10);
     if (!product) return setError("Select a category and product.");
     if (!unitPrice || unitPrice <= 0) return setError("Enter a valid selling price.");
-    if (!quantity || quantity <= 0) return setError("Enter a valid quantity.");
+    if (isNaN(quantity) || quantity <= 0) return setError("Enter a valid quantity.");
 
     // Check for duplicate — same product and same price → bump quantity
     const existingIndex = items.findIndex(
@@ -87,7 +74,7 @@ export default function BuilderPage() {
 
     setProductId("");
     setPrice("");
-    setQty("1");
+    setQty("");
   }
 
   function removeItem(index) {
@@ -115,7 +102,8 @@ export default function BuilderPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-lg font-semibold">New Quotation</h1>
+      <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">New Quotation</h1>
+
 
       {/* Add component row */}
       <div className="card p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -158,13 +146,13 @@ export default function BuilderPage() {
         </button>
       </div>
 
-      {error && <p className="text-red-600 text-sm">{error}</p>}
+      {(error || contextError) && <p className="text-red-600 dark:text-red-400 text-sm">{error || contextError}</p>}
 
       {/* Items table */}
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs uppercase tracking-wider text-gray-400 border-b border-gray-100">
+            <tr className="text-left text-xs uppercase tracking-wider font-semibold text-gray-500 dark:text-slate-300 border-b border-gray-200 dark:border-slate-700/80">
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">Component</th>
               <th className="px-4 py-3 text-right">Unit Price</th>
@@ -176,21 +164,22 @@ export default function BuilderPage() {
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td colSpan="6" className="px-4 py-8 text-center text-gray-300 text-sm">
+                <td colSpan="6" className="px-4 py-8 text-center text-gray-400 dark:text-slate-400 text-sm">
                   No components added yet.
                 </td>
               </tr>
             )}
+
             {items.map((it, i) => (
-              <tr key={i} className="border-t border-gray-50">
-                <td className="px-4 py-3 text-gray-500">{it.categoryName}</td>
-                <td className="px-4 py-3 font-medium">
+              <tr key={i} className="border-t border-gray-50 dark:border-slate-700/40">
+                <td className="px-4 py-3 text-gray-500 dark:text-slate-400">{it.categoryName}</td>
+                <td className="px-4 py-3 font-medium text-gray-900 dark:text-slate-100">
                   {it.brand ? it.brand + " " : ""}
                   {it.productName}
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums">{formatINR(it.unitPrice)}</td>
-                <td className="px-4 py-3 text-center tabular-nums">{it.quantity}</td>
-                <td className="px-4 py-3 text-right tabular-nums font-medium">{formatINR(it.lineTotal)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-700 dark:text-slate-300">{formatINR(it.unitPrice)}</td>
+                <td className="px-4 py-3 text-center tabular-nums text-gray-700 dark:text-slate-300">{it.quantity}</td>
+                <td className="px-4 py-3 text-right tabular-nums font-medium text-gray-900 dark:text-slate-100">{formatINR(it.lineTotal)}</td>
                 <td className="px-4 py-3 text-center">
                   <button onClick={() => removeItem(i)} className="action-link-red">
                     Remove
@@ -206,7 +195,7 @@ export default function BuilderPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           {items.length > 0 && (
-            <span className="text-lg font-semibold tabular-nums">
+            <span className="text-lg font-semibold tabular-nums text-gray-900 dark:text-slate-100">
               Grand Total: {formatINR(grandTotal)}
             </span>
           )}
@@ -215,6 +204,7 @@ export default function BuilderPage() {
           {saving ? "Saving…" : "Save Quotation"}
         </button>
       </div>
+
     </div>
   );
 }
